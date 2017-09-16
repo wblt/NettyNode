@@ -1,0 +1,13 @@
+syntax = "proto3";
+package dto;
+
+option java_package = "com.example.wb.nettynode.codec";
+option java_outer_classname = "NetCmdDataHeartDP";
+
+/**
+* 心跳包 数据格式
+*/
+message NetCmdDataHeartDto {
+	string time  = 1;
+	int32  direction = 2;
+}

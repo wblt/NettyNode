@@ -1,0 +1,22 @@
+//
+// Babibeng protocol V0.1 
+//
+// protocol <length> <header length> <header data> <body data>
+//            1        2               3             4
+//
+
+Babibeng protocol V0.1 
+
+1,2
+version 版本  整形  2 bit
+
+3,4
+totleLength 整体长度 版本  整形  2 bit
+
+header length  头长度
+body length    体长度
+
+header data
+body data
+
+
