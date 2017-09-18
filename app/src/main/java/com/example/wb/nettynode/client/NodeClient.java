@@ -1,6 +1,8 @@
 package com.example.wb.nettynode.client;
 
 import java.net.InetSocketAddress;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 
@@ -34,6 +36,9 @@ public class NodeClient {
 
 	private Channel channel;
 	private Bootstrap clientBootstrap;
+	private NodeClientHandler nodeClientHandler;
+	private ScheduledExecutorService executor = Executors
+			.newScheduledThreadPool(1);
 	// 配置信息
 	/**
 	 * 服务器开始
@@ -43,6 +48,9 @@ public class NodeClient {
 		EventLoopGroup eventLoopGroupWorker   = new NioEventLoopGroup();
 		try{
 			clientBootstrap = new Bootstrap();
+
+			nodeClientHandler = new NodeClientHandler();
+
 			clientBootstrap
 	                .group(eventLoopGroupWorker)
 	                .channel(NioSocketChannel.class)
@@ -72,7 +80,7 @@ public class NodeClient {
 	                                ch.pipeline().addLast(
 	                                		new NetDecoder(),
 	                                        new NetEncoder(),
-	                                        new NodeClientHandler()
+											nodeClientHandler
 	                                        );
 	                            }
 	                });
@@ -82,10 +90,25 @@ public class NodeClient {
 				
 				// 启动客户端	
 				doConnect();
-
 		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {
+			// 所有资源释放完成之后，清空资源，再次发起重连操作
+			executor.execute(new Runnable() {
+				@Override
+				public void run() {
+					try {
+						TimeUnit.SECONDS.sleep(1);
+						try {
+							connect();
+						} catch (Exception e) {
+							e.printStackTrace();
+						}
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
+			});
 		}
 		System.out.println("连接服务器结束");
 		System.out.println("连接服务器结束");
@@ -110,6 +133,9 @@ public class NodeClient {
 					// 保存好连接频道
 					channel = futureListener.channel();
 					System.out.println("连接服务器成功!");
+
+					// 发送消息
+					nodeClientHandler.sendLoginMsg(channel);
 				} else {
 					System.out.println("连接服务器失败! 过10秒后将会常识重新连接服务器");
 					futureListener.channel().eventLoop().schedule(new Runnable() {

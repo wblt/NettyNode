@@ -83,7 +83,12 @@ public interface DefConf {
 	 * 命令类型定义 工作流命令
 	 */
 	public final static int WF_COMMAND = 4;
-	
+
+	/**
+	 * 命令类型定义 工作流命令
+	 */
+	public final static int LOGIN_COMMAND = 5;
+
 	/**
 	 * 执行结果 正常类型
 	 */

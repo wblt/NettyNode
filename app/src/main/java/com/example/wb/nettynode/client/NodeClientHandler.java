@@ -9,12 +9,15 @@ import com.example.wb.nettynode.codec.NetCmdDataHeartDP;
 import com.example.wb.nettynode.codec.NetCommand;
 
 
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.timeout.IdleStateEvent;
 
 
 public class NodeClientHandler extends SimpleChannelInboundHandler<NetCommand> {
+
+	private Channel channelHandlerContext;
 
 	public NodeClientHandler() {
 
@@ -24,24 +27,19 @@ public class NodeClientHandler extends SimpleChannelInboundHandler<NetCommand> {
 	 */
 	@Override
 	public void channelActive(ChannelHandlerContext ctx) throws Exception {
-		
 		System.out.println("发送消息 开始");
 		System.out.println("channelActive");
-
 		System.out.println("发送消息 结束");
 	}
 
 	@Override
 	public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
 		super.channelRead(ctx, msg);
-
+		this.channelHandlerContext = ctx.channel();
 		NetCommand cmd = (NetCommand) msg;
-
 		System.out.println("接受到消息111"+cmd.getCmdCode());
 		System.out.println("接受到消息222"+cmd.toString());
-
 		System.out.println("消息类型===> : {}"+ cmd.getCmdType());
-
 		// 心跳类型
 		if (DefConf.HEART_COMMAND == cmd.getCmdType()) {
 			// 一个心跳包发送过来了
@@ -51,7 +49,6 @@ public class NodeClientHandler extends SimpleChannelInboundHandler<NetCommand> {
 		}
 	}
 
-
 	/**
 	 * 进入和出去的正常数据的处理
 	 * 
@@ -60,6 +57,8 @@ public class NodeClientHandler extends SimpleChannelInboundHandler<NetCommand> {
 	 */
 	protected void handleData(ChannelHandlerContext ctx, NetCommand msg) {
 		System.out.println("handleData 处理到达数据");
+
+
 	}
 	
     /**
@@ -95,7 +94,45 @@ public class NodeClientHandler extends SimpleChannelInboundHandler<NetCommand> {
     	// 客户端不做任何响应心跳的处理
     	System.out.println("处理心跳响应信息完成"+context.channel().remoteAddress());
     }
-    
+
+    public void sendLoginMsg(final Channel channel) {
+		channelHandlerContext = channel;
+		if (channel == null) {
+			System.out.println("----管道为空------");
+			return;
+		}
+		NetCommand netCommand = new NetCommand();
+		netCommand.setVersion(2);
+		// 命令Id
+		netCommand.setCmdId("00000002");
+		// 命令类型(心跳)
+		netCommand.setCmdType(DefConf.LOGIN_COMMAND);
+		// 命令编号(CT00000002 客户端向服务器端发送心跳包)
+		netCommand.setCmdCode("CT00000002");
+		channel.writeAndFlush(netCommand);
+//		new Thread(new Runnable() {
+//			@Override
+//			public void run() {
+//				try {
+//					while (true) {
+//						Thread.sleep(2000);
+//						NetCommand netCommand = new NetCommand();
+//						netCommand.setVersion(2);
+//						// 命令Id
+//						netCommand.setCmdId("00000002");
+//						// 命令类型(心跳)
+//						netCommand.setCmdType(DefConf.MQ_COMMAND);
+//						// 命令编号(CT00000002 客户端向服务器端发送心跳包)
+//						netCommand.setCmdCode("CT00000002");
+//						channel.writeAndFlush(netCommand);
+//					}
+//				} catch (InterruptedException e) {
+//					e.printStackTrace();
+//				}
+//			}
+//		}).start();
+
+	}
 	/**
 	 * 向客户端发送心跳包
 	 * 
@@ -125,9 +162,7 @@ public class NodeClientHandler extends SimpleChannelInboundHandler<NetCommand> {
 		
 		NetCmdDataHeartDP.NetCmdDataHeartDto netCmdDataHeartDto 
 			= netCmdDataHeartDtoBuilder.build();
-		
 		netCommand.setData(netCmdDataHeartDto.toByteArray());
-
 		context.channel().writeAndFlush(netCommand);
     }
     
@@ -175,7 +210,8 @@ public class NodeClientHandler extends SimpleChannelInboundHandler<NetCommand> {
     protected void handleAllIdle(ChannelHandlerContext ctx) {
     	//log.info("---ALL_IDLE---");
     	// 向服务器端发送心跳包
-    	sendPingMsg(ctx);
+
+		// sendPingMsg(ctx);
     }
 
 	@Override

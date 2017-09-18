@@ -1,6 +1,8 @@
 package com.example.wb.nettynode.server;
 
 import java.text.SimpleDateFormat;
+import java.util.HashMap;
+import java.util.Map;
 
 //import org.slf4j.Logger;
 //import org.slf4j.LoggerFactory;
@@ -13,20 +15,21 @@ import com.example.wb.nettynode.codec.NetCommand;
 import com.example.wb.nettynode.codec.BBBNetUtil;
 //import com.k12chn.babibeng.logicnode.comm.task.TaskDispatch;
 
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.timeout.IdleStateEvent;
 
 public class LogicNodeMessageHandler extends SimpleChannelInboundHandler<NetCommand> {
 
-	
+	private Map<String,Channel> authMap = new HashMap<>();
 	public LogicNodeMessageHandler() {
 		super();
 	}
 
 	@Override
 	protected void messageReceived(ChannelHandlerContext channelHandlerContext, NetCommand netCommand) throws Exception {
-		System.out.println("---messageReceived---");
+		System.out.println("---server收到一条消息---");
 	}
 
 
@@ -34,6 +37,8 @@ public class LogicNodeMessageHandler extends SimpleChannelInboundHandler<NetComm
 	public void channelActive(ChannelHandlerContext ctx) throws Exception {
 		final String remoteAddress = BBBNetUtil.parseChannelRemoteAddr(ctx.channel());
 		 System.out.println("TreeServerHandler channelActive : channelActive, the channel[{}]"+remoteAddress);
+
+
 	}
 
 	@Override
@@ -48,8 +53,25 @@ public class LogicNodeMessageHandler extends SimpleChannelInboundHandler<NetComm
 		if (DefConf.HEART_COMMAND == command.getCmdType()) {
 			// 一个心跳包发送过来了
 			handleHeartMsg(ctx,command);
-		} else { // 其他命令类型
+		} else if (DefConf.LOGIN_COMMAND == command.getCmdType()) {
+			// 第一次发送登录消息，记录通道
+			handleLoginAuth(ctx,command);
+		}
+		else { // 其他命令类型
 			handleData(ctx,command);
+		}
+	}
+
+	// 处理登录通道
+	private void handleLoginAuth(ChannelHandlerContext ctx, Object msg) {
+		System.out.println("---------收到一个新的登录请求，处理登录进来的客户端--------");
+		NetCommand command = (NetCommand) msg;
+		if (authMap.containsKey(command.getCmdId())) {
+			// 已经包含，那就也更新通道吧
+			authMap.put(command.getCmdId(),ctx.channel());
+		} else {
+			// 没有包含
+			authMap.put(command.getCmdId(),ctx.channel());
 		}
 	}
 
@@ -66,6 +88,10 @@ public class LogicNodeMessageHandler extends SimpleChannelInboundHandler<NetComm
 //		taskDispatch.setTaskExecutor(taskExecutor);
 //		taskDispatch.setLogicNodeContext(logicNodeContext);
 //		taskDispatch.dispatchTask(command);
+		System.out.println("-------------处理其他的消息-----------------");
+		String code = "serverRes:"+command.getCmdCode();
+		command.setCmdCode(code);
+		ctx.writeAndFlush(command);
 	}
 
     /**
@@ -76,6 +102,9 @@ public class LogicNodeMessageHandler extends SimpleChannelInboundHandler<NetComm
     private void handleHeartMsg(ChannelHandlerContext context,NetCommand command) {
     	
     	// System.out.println("处理心跳响应信息");
+
+		// 更新本地用户认证
+		handleLoginAuth(context,command);
     	
     	// 准备发送命令
 		NetCommand netCommand = new NetCommand();
